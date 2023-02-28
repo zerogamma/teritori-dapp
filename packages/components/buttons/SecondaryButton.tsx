@@ -29,6 +29,7 @@ export const SecondaryButton: React.FC<{
   paddingHorizontal?: number;
   color?: string;
   style?: StyleProp<ViewStyle>;
+  touchableStyle?: StyleProp<ViewStyle>;
   iconSVG?: React.FC<SvgProps>;
   disabled?: boolean;
   fullWidth?: boolean;
@@ -46,6 +47,7 @@ export const SecondaryButton: React.FC<{
   paddingHorizontal = 20,
   color = primaryColor,
   style,
+  touchableStyle,
   iconSVG,
   disabled = false,
   fullWidth = false,
@@ -80,7 +82,7 @@ export const SecondaryButton: React.FC<{
     <TouchableOpacity
       onPress={handlePress}
       disabled={disabled}
-      style={{ width: fullWidth ? "100%" : width }}
+      style={[{ width: fullWidth ? "100%" : width }, touchableStyle]}
       activeOpacity={activeOpacity}
     >
       <SecondaryBox
