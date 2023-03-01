@@ -1,12 +1,5 @@
 import { Currency } from "@keplr-wallet/types";
-import React, {
-  Dispatch,
-  RefObject,
-  SetStateAction,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import React, { forwardRef, useEffect, useMemo } from "react";
 import {
   RegisterOptions,
   useController,
@@ -63,11 +56,10 @@ export interface TextInputCustomProps<T extends FieldValues>
   subtitle?: React.ReactElement;
   labelStyle?: TextStyle;
   noBrokenCorners?: boolean;
-  setRef?: Dispatch<SetStateAction<RefObject<any> | null>>;
 }
 
 // A custom TextInput. You can add children (Ex: An icon or a small container)
-export const TextInputCustom = <T extends FieldValues>({
+export const TextInputCustom = forwardRef<any, any>(<T extends FieldValues>({
   label,
   placeHolder,
   onPressEnter,
@@ -88,9 +80,10 @@ export const TextInputCustom = <T extends FieldValues>({
   subtitle,
   labelStyle,
   noBrokenCorners,
-  setRef,
   ...restProps
-}: TextInputCustomProps<T>) => {
+}: TextInputCustomProps<T>,
+  ref: any
+) => {
   // variables
   const { field, fieldState } = useController<T>({
     name,
@@ -98,15 +91,6 @@ export const TextInputCustom = <T extends FieldValues>({
     rules,
     defaultValue,
   });
-  const inputRef = useRef<TextInput>(null);
-
-  // Passing ref to parent
-  useEffect(() => {
-    if (inputRef.current && setRef) {
-      setRef(inputRef);
-    }
-  }, [setRef]);
-
   // hooks
   useEffect(() => {
     if (defaultValue) {
@@ -116,125 +100,128 @@ export const TextInputCustom = <T extends FieldValues>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultValue]);
 
-  const error = useMemo(() => {
-    if (fieldState.error) {
-      if (fieldState.error.message) {
-        return fieldState.error.message;
+    const error = useMemo(() => {
+      if (fieldState.error) {
+        if (fieldState.error.message) {
+          return fieldState.error.message;
+        }
+        return DEFAULT_FORM_ERRORS.required;
       }
-      return DEFAULT_FORM_ERRORS.required;
-    }
-  }, [fieldState.error]);
+    }, [fieldState.error]);
 
-  // FIXME: the first input does not trigger the custom validation
+    // FIXME: the first input does not trigger the custom validation
 
-  // custom validation
-  const handleChangeText = (value: string) => {
-    if (currency) {
-      const reg = new RegExp(`^\\d+\\.?\\d{0,${currency.coinDecimals}}$`);
+    // custom validation
+    const handleChangeText = (value: string) => {
+      if (currency) {
+        const reg = new RegExp(`^\\d+\\.?\\d{0,${currency.coinDecimals}}$`);
 
-      if (rules?.max && parseFloat(value) > rules.max) {
+        if (rules?.max && parseFloat(value) > rules.max) {
+          return;
+        }
+
+        if (reg.test(value) || !value) {
+          field.onChange(value);
+          if (restProps.onChangeText) {
+            restProps.onChangeText(value);
+            return;
+          }
+        }
         return;
       }
 
-      if (reg.test(value) || !value) {
+      if ((regexp && (regexp.test(value) || value === "")) || !regexp) {
         field.onChange(value);
         if (restProps.onChangeText) {
           restProps.onChangeText(value);
-          return;
         }
       }
-      return;
-    }
+    };
 
-    if ((regexp && (regexp.test(value) || value === "")) || !regexp) {
-      field.onChange(value);
-      if (restProps.onChangeText) {
-        restProps.onChangeText(value);
+    // Handling key pressing
+    const handleKeyPress = (
+      event: NativeSyntheticEvent<TextInputKeyPressEventData>
+    ) => {
+      const {
+        nativeEvent: { key: keyValue },
+      } = event;
+      switch (keyValue) {
+        case "Enter":
+          if (onPressEnter) onPressEnter();
       }
-    }
-  };
+    };
 
-  // Handling key pressing
-  const handleKeyPress = (
-    event: NativeSyntheticEvent<TextInputKeyPressEventData>
-  ) => {
-    const {
-      nativeEvent: { key: keyValue },
-    } = event;
-    switch (keyValue) {
-      case "Enter":
-        if (onPressEnter) onPressEnter();
-    }
-  };
+    if (variant === "noStyle")
+      return (
+        <TextInput
+          ref={ref}
+          editable={!disabled}
+          placeholder={placeHolder}
+          onChangeText={handleChangeText}
+          onKeyPress={handleKeyPress}
+          placeholderTextColor={neutralA3}
+          value={field.value}
+          style={[styles.textInput, textInputStyle]}
+          {...restProps}
+        />
+      );
 
-  if (variant === "noStyle")
     return (
-      <TextInput
-        ref={inputRef}
-        editable={!disabled}
-        placeholder={placeHolder}
-        onChangeText={handleChangeText}
-        onKeyPress={handleKeyPress}
-        placeholderTextColor={neutralA3}
-        value={field.value}
-        style={[styles.textInput, textInputStyle]}
-        {...restProps}
-      />
+      <>
+        {variant === "labelOutside" && (
+          <>
+            <View style={styles.rowEnd}>
+              <BrandText style={[styles.labelText, fontSemibold14, labelStyle]}>
+                {label}
+              </BrandText>
+              {subtitle}
+            </View>
+            <SpacerColumn size={1} />
+          </>
+        )}
+
+        <TertiaryBox
+          squaresBackgroundColor={squaresBackgroundColor}
+          style={style}
+          mainContainerStyle={styles.mainContainer}
+          width={width}
+          fullWidth={!width}
+          height={height}
+          noBrokenCorners={noBrokenCorners}
+        >
+          <View style={styles.innerContainer}>
+            <View style={{ flex: 1, marginRight: children ? 12 : undefined }}>
+              {variant !== "labelOutside" && (
+                <Pressable onPress={() => ref?.current?.focus()}>
+                  <BrandText
+                    style={[styles.labelText, fontMedium10, labelStyle]}
+                  >
+                    {label}
+                  </BrandText>
+                  <SpacerColumn size={0.5} />
+                </Pressable>
+              )}
+              <TextInput
+                ref={ref}
+                editable={!disabled}
+                placeholder={placeHolder}
+                onChangeText={handleChangeText}
+                onKeyPress={handleKeyPress}
+                placeholderTextColor={neutralA3}
+                value={field.value}
+                style={[styles.textInput, textInputStyle]}
+                {...restProps}
+              />
+            </View>
+
+            <>{children}</>
+          </View>
+        </TertiaryBox>
+        <ErrorText>{error}</ErrorText>
+      </>
     );
-
-  return (
-    <>
-      {variant === "labelOutside" && (
-        <>
-          <View style={styles.rowEnd}>
-            <BrandText style={[styles.labelText, fontSemibold14, labelStyle]}>
-              {label}
-            </BrandText>
-            {subtitle}
-          </View>
-          <SpacerColumn size={1} />
-        </>
-      )}
-
-      <TertiaryBox
-        squaresBackgroundColor={squaresBackgroundColor}
-        style={style}
-        mainContainerStyle={styles.mainContainer}
-        width={width}
-        fullWidth={!width}
-        height={height}
-        noBrokenCorners={noBrokenCorners}
-      >
-        <View style={styles.innerContainer}>
-          <View style={{ flex: 1, marginRight: children ? 12 : undefined }}>
-            {variant !== "labelOutside" && (
-              <Pressable onPress={() => inputRef.current?.focus()}>
-                <BrandText style={[styles.labelText, fontMedium10, labelStyle]}>
-                  {label}
-                </BrandText>
-                <SpacerColumn size={0.5} />
-              </Pressable>
-            )}
-            <TextInput
-              ref={inputRef}
-              editable={!disabled}
-              placeholder={placeHolder}
-              onKeyPress={handleKeyPress}
-              placeholderTextColor={neutralA3}
-              value={field.value}
-              style={[styles.textInput, textInputStyle]}
-              {...restProps}
-              onChangeText={handleChangeText}
-            />
-          </View>
-
-          <>{children}</>
-        </View>
-      </TertiaryBox>
-      <ErrorText>{error}</ErrorText>
-    </>
-  );
-};
+  }
+);
 
 const styles = StyleSheet.create({
   rowEnd: {
